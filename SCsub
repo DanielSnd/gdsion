@@ -1,0 +1,18 @@
+#!/usr/bin/env python
+
+Import("env")
+
+ymidi = ARGUMENTS.get('ymidi', 'yes')
+if ymidi == 'yes':
+    env.add_source_files(env.modules_sources, "*.cpp")
+    env.add_source_files(env.modules_sources, "chip/*.cpp")
+    env.add_source_files(env.modules_sources, "chip/channels/*.cpp")
+    env.add_source_files(env.modules_sources, "chip/wave/*.cpp")
+    env.add_source_files(env.modules_sources, "effector/*.cpp")
+    env.add_source_files(env.modules_sources, "effector/effects/*.cpp")
+    env.add_source_files(env.modules_sources, "effector/filters/*.cpp")
+    env.add_source_files(env.modules_sources, "events/*.cpp")
+    env.add_source_files(env.modules_sources, "sequencer/*.cpp")
+    env.add_source_files(env.modules_sources, "sequencer/base/*.cpp")
+    env.add_source_files(env.modules_sources, "templates/*.cpp")
+    env.add_source_files(env.modules_sources, "utils/*.cpp")

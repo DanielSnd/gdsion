@@ -1,18 +1,45 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<class name="SiONVoice" inherits="SiMMLVoice" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+<class name="SiONVoice" inherits="SiMMLVoice" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
 	<brief_description>
-		Container for the configuration of a synthesized voice.
+		A voice/instrument definition for the SiON synthesizer that controls how notes sound when played.
 	</brief_description>
 	<description>
-		A new voice can be created using the factory method [method create].
-		[codeblocks]
-		[gdscript]
-			var voice := SiONVoice.create()
-			voice.name = "My Instrument"
-		[/gdscript]
-		[/codeblocks]
-		Using the class constructor creates a voice with every parameter set to default, which is not desirable most of the time.
-		A large number of preconfigured voices can be accessed via [SiONVoicePresetUtil].
+		SiONVoice defines the sound characteristics of an instrument in the SiON synthesizer. It controls parameters like attack, decay, sustain, release (ADSR envelope), wave shapes, modulation, and other synthesis parameters.
+
+		[b]Key Features:[/b]
+		• Support for multiple sound chip types (FM, PSG, PCM, etc.)
+		• ADSR envelope control
+		• Wave shape and modulation settings
+		• Filter and effects parameters
+		• MML string generation and parsing
+		• PCM and sampler wave support
+
+		[b]Basic Usage:[/b]
+		[codeblock]
+		# Create a simple FM voice
+		var voice = SiONVoice.create(SiONModuleType.MODULE_FM)
+		voice.set_envelope(63, 48, 32, 63, 16, 0)  # ADSR settings
+		
+		# Use with SiONDriver
+		var driver = SiONDriver.create()
+		add_child(driver)
+		driver.stream()
+		driver.note_on(60, voice)  # Play middle C with custom voice
+		[/codeblock]
+
+		[b]Voice Types:[/b]
+		• [code]MODULE_FM[/code] - FM synthesis (like classic synthesizers)
+		• [code]MODULE_PSG[/code] - Programmable Sound Generator (8-bit style)
+		• [code]MODULE_PCM[/code] - PCM/sampled audio
+		• [code]MODULE_SAMPLE[/code] - Sampler with note-off control
+		• [code]MODULE_PULSE[/code] - Pulse wave synthesis
+		• [code]MODULE_KS[/code] - Karplus-Strong string synthesis
+
+		[b]Important Notes:[/b]
+		• Voices can be reused across multiple notes
+		• Parameters are chip-type specific
+		• MML strings can be generated for voice definitions
+		• Voices can be cloned and modified
 	</description>
 	<tutorials>
 	</tutorials>
@@ -28,7 +55,37 @@
 			<param index="6" name="wave_shape2" type="int" default="0" />
 			<param index="7" name="pitch_shift2" type="int" default="0" />
 			<description>
-				Creates a new instance of [SiONVoice]. Prefer using this method instead of the class constructor.
+				Creates a new SiONVoice instance with the specified parameters.
+
+				[b]Parameters:[/b]
+				• [code]module_type[/code] - Type of synthesis module (FM, PSG, PCM, etc.)
+				• [code]channel_num[/code] - Channel number for the voice
+				• [code]attack_rate[/code] - Attack rate (0-63, higher = faster attack)
+				• [code]release_rate[/code] - Release rate (0-63, higher = faster release)
+				• [code]pitch_shift[/code] - Pitch shift amount in semitones
+				• [code]connection_type[/code] - Connection type for multi-operator voices (-1 = single operator)
+				• [code]wave_shape2[/code] - Wave shape for second operator
+				• [code]pitch_shift2[/code] - Pitch shift for second operator
+
+				[b]Returns:[/b] A new SiONVoice instance
+
+				[b]Example:[/b]
+				[codeblock]
+				# Create a simple FM voice
+				var voice = SiONVoice.create(SiONModuleType.MODULE_FM)
+				
+				# Create a complex FM voice with two operators
+				var voice = SiONVoice.create(
+					SiONModuleType.MODULE_FM,  # FM synthesis
+					0,                         # Channel 0
+					48,                        # Medium attack
+					32,                        # Medium release
+					0,                         # No pitch shift
+					1,                         # Algorithm 1 (2 operators)
+					SiONPulseGeneratorType.PULSE_SINE,  # Second operator wave
+					0                          # No pitch shift on second operator
+				)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="get_mml" qualifiers="const">
@@ -37,52 +94,146 @@
 			<param index="1" name="chip_type" type="int" enum="SiONChipType" default="-1" />
 			<param index="2" name="append_postfix" type="bool" default="true" />
 			<description>
-				Returns a configuration of this voice as an MML string. This string can be then passed back to the driver for playback, alongside a melody.
-				Use [param index] to specify an internal index for this voice, which can then be referenced elsewhere in your MML string.
-				Use [param chip_type] to force the type used when generating voice configuration. By default voice's actual chip type is used.
-				Use [param append_postfix] to include additional configuration for this voice, such as filter and modulation settings from the channel.
+				Generates an MML string representation of the voice parameters.
+
+				[b]Parameters:[/b]
+				• [code]index[/code] - Voice index number
+				• [code]chip_type[/code] - Chip type for MML format (-1 = auto-detect)
+				• [code]append_postfix[/code] - Whether to include additional voice settings
+
+				[b]Returns:[/b] MML string that can be used in music files
+
+				[b]Example:[/b]
+				[codeblock]
+				var voice = SiONVoice.create(SiONModuleType.MODULE_FM)
+				voice.set_envelope(48, 32, 16, 48, 8, 16)
+				
+				# Generate MML for voice 0
+				var mml = voice.get_mml(0)
+				print(mml)  # Outputs: "#@0 { ... }"
+				
+				# Use in a music file
+				var music = mml + "\nt120 l8 cdefgab>c"
+				[/codeblock]
 			</description>
 		</method>
 		<method name="get_params" qualifiers="const">
 			<return type="int[]" />
 			<description>
-				Returns a configuration of this voice as an array of integers. The voice is treated as a SiOPM voice.
+				Returns the current voice parameters as an array of integers.
+
+				[b]Returns:[/b] Array of parameter values in the current chip format
+
+				[b]Example:[/b]
+				[codeblock]
+				var voice = SiONVoice.create(SiONModuleType.MODULE_FM)
+				voice.set_envelope(48, 32, 16, 48, 8, 16)
+				
+				var params = voice.get_params()
+				print("Voice parameters: ", params)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="get_params_al" qualifiers="const">
 			<return type="int[]" />
 			<description>
-				Returns a configuration of this voice as an array of integers. The voice is treated as an AL voice.
+				Returns the voice parameters in Analog-Like format.
+
+				[b]Returns:[/b] Array of Analog-Like parameter values
+
+				[b]Example:[/b]
+				[codeblock]
+				var voice = SiONVoice.create()
+				voice.set_analog_like(1, 1, 1, 0, 0)
+				
+				var al_params = voice.get_params_al()
+				print("Analog-Like parameters: ", al_params)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="get_params_ma3" qualifiers="const">
 			<return type="int[]" />
 			<description>
-				Returns a configuration of this voice as an array of integers. The voice is treated as an MA-3 voice.
+				Returns the voice parameters in MA3 (YM2610) format.
+
+				[b]Returns:[/b] Array of MA3 parameter values
+
+				[b]Example:[/b]
+				[codeblock]
+				var voice = SiONVoice.create(SiONModuleType.MODULE_FM)
+				voice.set_envelope(48, 32, 16, 48, 8, 16)
+				
+				var ma3_params = voice.get_params_ma3()
+				print("MA3 parameters: ", ma3_params)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="get_params_opl" qualifiers="const">
 			<return type="int[]" />
 			<description>
-				Returns a configuration of this voice as an array of integers. The voice is treated as an OPL voice.
+				Returns the voice parameters in OPL (YM3812) format.
+
+				[b]Returns:[/b] Array of OPL parameter values
+
+				[b]Example:[/b]
+				[codeblock]
+				var voice = SiONVoice.create(SiONModuleType.MODULE_FM)
+				voice.set_envelope(48, 32, 16, 48, 8, 16)
+				
+				var opl_params = voice.get_params_opl()
+				print("OPL parameters: ", opl_params)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="get_params_opm" qualifiers="const">
 			<return type="int[]" />
 			<description>
-				Returns a configuration of this voice as an array of integers. The voice is treated as an OPM voice.
+				Returns the voice parameters in OPM (YM2151) format.
+
+				[b]Returns:[/b] Array of OPM parameter values
+
+				[b]Example:[/b]
+				[codeblock]
+				var voice = SiONVoice.create(SiONModuleType.MODULE_FM)
+				voice.set_envelope(48, 32, 16, 48, 8, 16)
+				
+				var opm_params = voice.get_params_opm()
+				print("OPM parameters: ", opm_params)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="get_params_opn" qualifiers="const">
 			<return type="int[]" />
 			<description>
-				Returns a configuration of this voice as an array of integers. The voice is treated as an OPN voice.
+				Returns the voice parameters in OPN (YM2203) format.
+
+				[b]Returns:[/b] Array of OPN parameter values
+
+				[b]Example:[/b]
+				[codeblock]
+				var voice = SiONVoice.create(SiONModuleType.MODULE_FM)
+				
+				# OPN parameters for a bass sound
+				var opn_params = [1, 0, 0, 0, 48, 32, 16, 48, 8, 16, 0, 0, 1, 0, 0, 0, 0, 0]
+				voice.set_params_opn(opn_params)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="get_params_opx" qualifiers="const">
 			<return type="int[]" />
 			<description>
-				Returns a configuration of this voice as an array of integers. The voice is treated as an OPX voice.
+				Returns the voice parameters in OPX (YM2608) format.
+
+				[b]Returns:[/b] Array of OPX parameter values
+
+				[b]Example:[/b]
+				[codeblock]
+				var voice = SiONVoice.create(SiONModuleType.MODULE_FM)
+				
+				# OPX parameters for a lead sound
+				var opx_params = [1, 0, 0, 0, 48, 32, 16, 48, 8, 16, 0, 0, 1, 0, 0, 0, 0, 0]
+				voice.set_params_opx(opx_params)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="set_amplitude_modulation">
@@ -92,7 +243,26 @@
 			<param index="2" name="delay" type="int" default="0" />
 			<param index="3" name="term" type="int" default="0" />
 			<description>
-				Sets amplitude modulation parameters.
+				Sets amplitude modulation (tremolo) parameters for the voice.
+
+				[b]Parameters:[/b]
+				• [code]depth[/code] - Modulation depth (0-127, higher = more modulation)
+				• [code]end_depth[/code] - Final modulation depth (for changing over time)
+				• [code]delay[/code] - Delay before modulation starts (in samples)
+				• [code]term[/code] - Duration of modulation (in samples)
+
+				[b]Example:[/b]
+				[codeblock]
+				var voice = SiONVoice.create(SiONModuleType.MODULE_FM)
+				
+				# Add a gentle tremolo effect
+				voice.set_amplitude_modulation(
+					16,   # Light modulation
+					32,   # Increase to medium over time
+					4410, # Start after 0.1 seconds
+					44100 # Last for 1 second
+				)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="set_analog_like">
@@ -103,14 +273,52 @@
 			<param index="3" name="balance" type="int" default="0" />
 			<param index="4" name="pitch_difference" type="int" default="0" />
 			<description>
-				Sets analoge-like parameters.
+				Configures the voice for analog-like synthesis with two oscillators.
+
+				[b]Parameters:[/b]
+				• [code]connection_type[/code] - Connection type (0-3, different algorithms)
+				• [code]wave_shape1[/code] - Wave shape for first oscillator
+				• [code]wave_shape2[/code] - Wave shape for second oscillator
+				• [code]balance[/code] - Balance between oscillators (-64 to 64)
+				• [code]pitch_difference[/code] - Pitch difference between oscillators
+
+				[b]Example:[/b]
+				[codeblock]
+				var voice = SiONVoice.create()
+				voice.set_analog_like(
+					1,    # Algorithm 1
+					SiONPulseGeneratorType.PULSE_SAW_UP,   # Saw wave
+					SiONPulseGeneratorType.PULSE_SQUARE,   # Square wave
+					0,    # Equal balance
+					7     # 7 semitones difference (perfect fifth)
+				)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="set_by_mml">
 			<return type="int" />
 			<param index="0" name="mml" type="String" />
 			<description>
-				Sets this voice by an MML string.
+				Sets voice parameters by parsing an MML string.
+
+				[b]Parameters:[/b]
+				• [code]mml[/code] - MML string containing voice definition
+
+				[b]Returns:[/b] Voice index number from the MML, or -1 if parsing failed
+
+				[b]Example:[/b]
+				[codeblock]
+				var voice = SiONVoice.create()
+				
+				# Parse MML voice definition
+				var mml = "#@0 { // Piano\n1,0,0,0,48,32,16,48,8,16,0,0,1,0,0,0,0,0\n};"
+				var index = voice.set_by_mml(mml)
+				
+				if index >= 0:
+					print("Voice loaded successfully, index: ", index)
+				else:
+					print("Failed to parse MML")
+				[/codeblock]
 			</description>
 		</method>
 		<method name="set_envelope">
@@ -122,7 +330,30 @@
 			<param index="4" name="sustain_level" type="int" />
 			<param index="5" name="total_level" type="int" />
 			<description>
-				Sets envelope parameters.
+				Sets the ADSR envelope parameters for all operators in the voice.
+
+				[b]Parameters:[/b]
+				• [code]attack_rate[/code] - Attack rate (0-63, higher = faster attack)
+				• [code]decay_rate[/code] - Decay rate (0-63, higher = faster decay)
+				• [code]sustain_rate[/code] - Sustain rate (0-63, higher = faster sustain)
+				• [code]release_rate[/code] - Release rate (0-63, higher = faster release)
+				• [code]sustain_level[/code] - Sustain level (0-15, higher = louder sustain)
+				• [code]total_level[/code] - Total volume level (0-127, lower = louder)
+
+				[b]Example:[/b]
+				[codeblock]
+				var voice = SiONVoice.create(SiONModuleType.MODULE_FM)
+				
+				# Set a piano-like envelope
+				voice.set_envelope(
+					48,   # Medium-fast attack
+					32,   # Medium decay
+					16,   # Slow sustain
+					48,   # Medium release
+					8,    # Medium sustain level
+					16    # Medium volume
+				)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="set_filter_envelope">
@@ -139,56 +370,156 @@
 			<param index="9" name="sustain_cutoff" type="int" default="32" />
 			<param index="10" name="release_cutoff" type="int" default="128" />
 			<description>
-				Sets filter envelope parameters.
+				Sets the filter envelope parameters for dynamic filtering effects.
+
+				[b]Parameters:[/b]
+				• [code]filter_type[/code] - Type of filter (0 = low-pass, etc.)
+				• [code]cutoff[/code] - Filter cutoff frequency (0-255)
+				• [code]resonance[/code] - Filter resonance (0-255)
+				• [code]attack_rate[/code] - Filter attack rate (0-63)
+				• [code]decay_rate1[/code] - First decay rate (0-63)
+				• [code]decay_rate2[/code] - Second decay rate (0-63)
+				• [code]release_rate[/code] - Release rate (0-63)
+				• [code]decay_cutoff1[/code] - Cutoff after first decay (0-255)
+				• [code]decay_cutoff2[/code] - Cutoff after second decay (0-255)
+				• [code]sustain_cutoff[/code] - Sustain cutoff (0-255)
+				• [code]release_cutoff[/code] - Release cutoff (0-255)
+
+				[b]Example:[/b]
+				[codeblock]
+				var voice = SiONVoice.create(SiONModuleType.MODULE_FM)
+				
+				# Set a filter that opens and closes over time
+				voice.set_filter_envelope(
+					0,    # Low-pass filter
+					128,  # Medium cutoff
+					32,   # Some resonance
+					48,   # Medium attack
+					32,   # Medium decay
+					16,   # Slow second decay
+					48,   # Medium release
+					64,   # Lower cutoff after decay
+					32,   # Even lower after second decay
+					16,   # Low sustain cutoff
+					128   # Back to medium on release
+				)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="set_params">
 			<return type="void" />
 			<param index="0" name="args" type="int[]" />
 			<description>
-				Sets the configuration of this voice as an array of integers. The voice is treated as a SiOPM voice.
+				Sets voice parameters using a raw parameter array. This is for advanced users who know the exact parameter format for their chip type.
+
+				[b]Parameters:[/b]
+				• [code]args[/code] - Array of parameter values in chip-specific format
+
+				[b]Example:[/b]
+				[codeblock]
+				var voice = SiONVoice.create(SiONModuleType.MODULE_FM)
+				
+				# Set parameters for a simple FM voice
+				var params = [1, 0, 0, 0, 48, 32, 16, 48, 8, 16, 0, 0, 1, 0, 0, 0, 0, 0]
+				voice.set_params(params)
+				[/codeblock]
+
+				[b]Note:[/b] Parameter format varies by chip type. Use the specific setter methods like [method set_params_opm] for better compatibility.
 			</description>
 		</method>
 		<method name="set_params_al">
 			<return type="void" />
 			<param index="0" name="args" type="int[]" />
 			<description>
-				Sets the configuration of this voice as an array of integers. The voice is treated as an AL voice.
+				Sets voice parameters specifically for Analog-Like chip format.
+
+				[b]Parameters:[/b]
+				• [code]args[/code] - Array of Analog-Like parameter values
+
+				[b]Example:[/b]
+				[codeblock]
+				var voice = SiONVoice.create()
+				
+				# Analog-Like parameters for a vintage synth sound
+				var al_params = [1, 0, 0, 0, 48, 32, 16, 48, 8, 16, 0, 0, 1, 0, 0, 0, 0, 0]
+				voice.set_params_al(al_params)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="set_params_ma3">
 			<return type="void" />
 			<param index="0" name="args" type="int[]" />
 			<description>
-				Sets the configuration of this voice as an array of integers. The voice is treated as an MA-3 voice.
-			</description>
-		</method>
-		<method name="set_params_opl">
-			<return type="void" />
-			<param index="0" name="args" type="int[]" />
-			<description>
-				Sets the configuration of this voice as an array of integers. The voice is treated as an OPL voice.
+				Sets voice parameters specifically for MA3 (YM2610) chip format.
+
+				[b]Parameters:[/b]
+				• [code]args[/code] - Array of MA3 parameter values
+
+				[b]Example:[/b]
+				[codeblock]
+				var voice = SiONVoice.create(SiONModuleType.MODULE_FM)
+				
+				# MA3 parameters for a pad sound
+				var ma3_params = [1, 0, 0, 0, 48, 32, 16, 48, 8, 16, 0, 0, 1, 0, 0, 0, 0, 0]
+				voice.set_params_ma3(ma3_params)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="set_params_opm">
 			<return type="void" />
 			<param index="0" name="args" type="int[]" />
 			<description>
-				Sets the configuration of this voice as an array of integers. The voice is treated as an OPM voice.
+				Sets voice parameters specifically for OPM (YM2151) chip format.
+
+				[b]Parameters:[/b]
+				• [code]args[/code] - Array of OPM parameter values
+
+				[b]Example:[/b]
+				[codeblock]
+				var voice = SiONVoice.create(SiONModuleType.MODULE_FM)
+				
+				# OPM parameters for a piano-like sound
+				var opm_params = [1, 0, 0, 0, 48, 32, 16, 48, 8, 16, 0, 0, 1, 0, 0, 0, 0, 0]
+				voice.set_params_opm(opm_params)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="set_params_opn">
 			<return type="void" />
 			<param index="0" name="args" type="int[]" />
 			<description>
-				Sets the configuration of this voice as an array of integers. The voice is treated as an OPN voice.
+				Sets voice parameters specifically for OPN (YM2203) chip format.
+
+				[b]Parameters:[/b]
+				• [code]args[/code] - Array of OPN parameter values
+
+				[b]Example:[/b]
+				[codeblock]
+				var voice = SiONVoice.create(SiONModuleType.MODULE_FM)
+				
+				# OPN parameters for a bass sound
+				var opn_params = [1, 0, 0, 0, 48, 32, 16, 48, 8, 16, 0, 0, 1, 0, 0, 0, 0, 0]
+				voice.set_params_opn(opn_params)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="set_params_opx">
 			<return type="void" />
 			<param index="0" name="args" type="int[]" />
 			<description>
-				Sets the configuration of this voice as an array of integers. The voice is treated as an OPX voice.
+				Sets voice parameters specifically for OPX (YM2608) chip format.
+
+				[b]Parameters:[/b]
+				• [code]args[/code] - Array of OPX parameter values
+
+				[b]Example:[/b]
+				[codeblock]
+				var voice = SiONVoice.create(SiONModuleType.MODULE_FM)
+				
+				# OPX parameters for a lead sound
+				var opx_params = [1, 0, 0, 0, 48, 32, 16, 48, 8, 16, 0, 0, 1, 0, 0, 0, 0, 0]
+				voice.set_params_opx(opx_params)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="set_pitch_modulation">
@@ -198,7 +529,26 @@
 			<param index="2" name="delay" type="int" default="0" />
 			<param index="3" name="term" type="int" default="0" />
 			<description>
-				Sets pitch modulation parameters.
+				Sets pitch modulation (vibrato) parameters for the voice.
+
+				[b]Parameters:[/b]
+				• [code]depth[/code] - Modulation depth in semitones (0-127)
+				• [code]end_depth[/code] - Final modulation depth (for changing over time)
+				• [code]delay[/code] - Delay before modulation starts (in samples)
+				• [code]term[/code] - Duration of modulation (in samples)
+
+				[b]Example:[/b]
+				[codeblock]
+				var voice = SiONVoice.create(SiONModuleType.MODULE_FM)
+				
+				# Add a subtle vibrato effect
+				voice.set_pitch_modulation(
+					2,     # 2 semitones of vibrato
+					4,     # Increase to 4 semitones over time
+					22050, # Start after 0.5 seconds
+					44100  # Last for 1 second
+				)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="set_pms_guitar">
@@ -210,13 +560,45 @@
 			<param index="4" name="wave_shape" type="int" default="20" />
 			<param index="5" name="tension" type="int" default="8" />
 			<description>
-				Sets PMS guitar parameters.
+				Configures the voice for Karplus-Strong string synthesis (guitar-like sounds).
+
+				[b]Parameters:[/b]
+				• [code]attack_rate[/code] - Attack rate (0-63)
+				• [code]decay_rate[/code] - Decay rate (0-63)
+				• [code]total_level[/code] - Total volume level (0-127, lower = louder)
+				• [code]fixed_pitch[/code] - Fixed pitch in MIDI note numbers
+				• [code]wave_shape[/code] - Wave shape for the string
+				• [code]tension[/code] - String tension (affects timbre)
+
+				[b]Example:[/b]
+				[codeblock]
+				var voice = SiONVoice.create()
+				voice.set_pms_guitar(
+					48,   # Medium attack
+					32,   # Medium decay
+					16,   # Medium volume
+					69,   # A4 (440 Hz)
+					20,   # Saw wave
+					8     # Medium tension
+				)
+				[/codeblock]
 			</description>
 		</method>
 	</methods>
 	<members>
 		<member name="name" type="String" setter="set_name" getter="get_name" default="&quot;&quot;">
-			Human-readable name associated with this voice.
+			The name of the voice. This is used for identification and can be included in MML strings.
+
+			[b]Example:[/b]
+			[codeblock]
+			var voice = SiONVoice.create(SiONModuleType.MODULE_FM)
+			voice.name = "Piano"
+			voice.set_envelope(48, 32, 16, 48, 8, 16)
+			
+			# The name will appear in MML output
+			var mml = voice.get_mml(0)
+			print(mml)  # Includes "// Piano" comment
+			[/codeblock]
 		</member>
 	</members>
 </class>

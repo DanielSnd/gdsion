@@ -1,6 +1,0 @@
-ERROR: Translator: Parameter 'FB' value (8) is outside of valid range (0 : 7). Value will be looped.
-ERROR: Translator: Parameter 'FB' value (8) is outside of valid range (0 : 7). Value will be looped.
-ERROR: Translator: Parameter 'FB' value (8) is outside of valid range (0 : 7). Value will be looped.
-ERROR: Translator: Parameter 'FB' value (8) is outside of valid range (0 : 7). Value will be looped.
-ERROR: Translator: Parameter 'FB' value (8) is outside of valid range (0 : 7). Value will be looped.
-ERROR: Translator: Parameter 'FB' value (8) is outside of valid range (0 : 7). Value will be looped.

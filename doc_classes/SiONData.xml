@@ -1,11 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<class name="SiONData" inherits="SiMMLData" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+<class name="SiONData" inherits="SiMMLData" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
 	<brief_description>
-		Container for the state data used during compilation and processing of the input.
 	</brief_description>
 	<description>
-		When the [method SiONDriver.play] method is called with an MML string, this container is created implicitly by parsing the provided string. It can also be created by hand and supplied to the [method SiONDriver.play] method.
-		When creating by hand, make sure to carefully and correctly craft the event sequence (or sequences). Refer to [method MMLData.get_global_sequence] and [method MMLData.get_sequence_group].
 	</description>
 	<tutorials>
 	</tutorials>

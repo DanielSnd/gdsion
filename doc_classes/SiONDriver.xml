@@ -1,33 +1,107 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<class name="SiONDriver" inherits="Node" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+<class name="SiONDriver" inherits="Node" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
 	<brief_description>
-		Main GDSiON class for configuration and control of the synthesizer.
+		A software synthesizer driver for creating and playing music using MML (Music Macro Language) in Godot games.
 	</brief_description>
 	<description>
-		The driver is your main tool for controlling the GDSiON synthesizer. It exposes methods to initialize streaming or rendering of the output buffer, to get internal components and modules, and to configure high level properties.
-		A new instance can be created using the factory method [method create]. Note, that [SiONDriver] is a node and must be added to the scene tree.
-		[codeblocks]
-		[gdscript]
-			var driver := SiONDriver.create()
-			add_child(driver)
-		[/gdscript]
-		[/codeblocks]
-		Using the class constructor creates an instance with every parameter set to default, which may not be desirable. Only one driver instance can exist at the same time.
+		SiONDriver is a powerful software synthesizer that allows you to create and play music directly in your Godot games using MML (Music Macro Language). It provides real-time audio synthesis with support for various sound chips, effects, and advanced audio features.
+
+		[b]Key Features:[/b]
+		• Real-time MML music synthesis and playback
+		• Support for multiple sound chip emulations (FM, PSG, PCM, etc.)
+		• Built-in audio effects and processing
+		• Background music with fade transitions
+		• Note-by-note playback control
+		• Audio rendering for file export
+		• Performance monitoring and statistics
+
+		[b]Basic Usage:[/b]
+		[codeblock]
+		# Create a SiONDriver instance
+		var driver = SiONDriver.create()
+		add_child(driver)
+
+		# Compile and play MML music
+		var mml = "t120 l8 cdefgabc&gt;c"
+		var data = driver.compile(mml)
+		driver.play(data)
+		[/codeblock]
+
+		[b]Important Notes:[/b]
+		• Only one SiONDriver instance should exist at a time (unless multiple drivers are explicitly allowed)
+		• The driver must be added to the scene tree to function properly
+		• Buffer length can only be 2048, 4096, or 8192 samples
+		• Only stereo (2 channels) and mono (1 channel) output are supported
+		• Sample rate is fixed at 44100 Hz
+
+		[b]MML Syntax:[/b]
+		MML (Music Macro Language) is a text-based music notation system. Basic commands include:
+		• [code]t[/code] - Set tempo (BPM)
+		• [code]l[/code] - Set default note length
+		• [code]o[/code] - Set octave
+		• [code]cdefgab[/code] - Note names (C, D, E, F, G, A, B)
+		• [code]r[/code] - Rest
+		• [code]&lt;[/code] and [code]&gt;[/code] - Octave up/down
+		• [code]v[/code] - Set volume
+		• [code]@[/code] - Set voice/instrument
+
+		For more advanced MML features, refer to the SiON documentation and examples.
 	</description>
 	<tutorials>
+		<link title="Basic MML Music Creation">https://github.com/your-repo/gdsion/wiki/Basic-MML</link>
+		<link title="Interactive Music with Note Playback">https://github.com/your-repo/gdsion/wiki/Interactive-Music</link>
+		<link title="Audio Effects and Processing">https://github.com/your-repo/gdsion/wiki/Audio-Effects</link>
 	</tutorials>
 	<methods>
 		<method name="clear_data">
 			<return type="void" />
 			<description>
-				Clears current data set previously by [method play], [method compile], or [method render]. Note that calling [method stop] during streaming does this already.
+				Clears the currently loaded music data. This frees memory but doesn't affect playback.
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create()
+				add_child(driver)
+				
+				var data = driver.compile("t120 l8 cdefgab&gt;c")
+				driver.play(data)
+				
+				# Clear data to free memory
+				driver.clear_data()
+				[/codeblock]
 			</description>
 		</method>
 		<method name="compile">
 			<return type="SiONData" />
 			<param index="0" name="mml" type="String" />
 			<description>
-				Compiles the given MML string into a [SiONData] instance. This instance can then be used to render the melody out into a buffer via [method render], or to play it via [method play].
+				Compiles MML (Music Macro Language) text into playable music data. This method parses the MML string and creates a SiONData object that can be played or rendered.
+
+				[b]Parameters:[/b]
+				• [code]mml[/code] - MML string containing music notation
+
+				[b]Returns:[/b] A SiONData object containing the compiled music
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create()
+				add_child(driver)
+
+				# Simple melody
+				var mml = "t120 l8 cdefgab&gt;c"
+				var data = driver.compile(mml)
+				driver.play(data)
+
+				# More complex example with multiple tracks
+				var mml = """
+				#TRACK1 t120 l8 cdefgab&gt;c
+				#TRACK2 t120 l4 o3 cegc
+				"""
+				var data = driver.compile(mml)
+				driver.play(data)
+				[/codeblock]
+
+				[b]Note:[/b] This method is synchronous and will block until compilation is complete. For long MML strings, consider using [method queue_compile] instead.
 			</description>
 		</method>
 		<method name="create" qualifiers="static">
@@ -37,149 +111,328 @@
 			<param index="2" name="sample_rate" type="int" default="44100" />
 			<param index="3" name="bitrate" type="int" default="0" />
 			<description>
-				Creates a new instance of [SiONDriver]. Prefer using this method instead of the class constructor.
-				Use [param buffer_size] to control the size of the generated buffer. Bigger size is more demanding on your hardware. Supported values are [code]2048[/code], [code]4096[/code], [code]8192[/code].
-				Use [param channel_num] to configure the number of output channels. Can only be [code]1[/code] for mono and [code]2[/code] for stereo.
-				Use [param sample_rate] to control the sampling rate. Only [code]44100[/code] is supported at this time.
-				Use [param bitrate] to enable quantization.
+				Creates a new SiONDriver instance. This is the recommended way to create a driver since Godot doesn't expose constructors directly.
+
+				[b]Parameters:[/b]
+				• [code]buffer_size[/code] - Audio buffer size in samples. Must be 2048, 4096, or 8192. Larger buffers provide better performance but higher latency.
+				• [code]channel_num[/code] - Number of audio channels (1 for mono, 2 for stereo)
+				• [code]sample_rate[/code] - Audio sample rate in Hz (currently only 44100 is supported)
+				• [code]bitrate[/code] - Audio bitrate (0 for float format)
+
+				[b]Example:[/b]
+				[codeblock]
+				# Create a driver with default settings
+				var driver = SiONDriver.create()
+				add_child(driver)
+
+				# Create a driver with custom buffer size
+				var driver = SiONDriver.create(4096, 2, 44100, 0)
+				add_child(driver)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="get_audio_playback" qualifiers="const">
 			<return type="AudioStreamGeneratorPlayback" />
 			<description>
-				Returns the internal [AudioStreamGeneratorPlayback] instance. Only available during streaming (see [method stream]).
 			</description>
 		</method>
 		<method name="get_audio_player" qualifiers="const">
 			<return type="AudioStreamPlayer" />
 			<description>
-				Returns the internal [AudioStreamPlayer] instance. The player instance can be used to change the audio bus used by the synthesizer.
 			</description>
 		</method>
 		<method name="get_audio_stream" qualifiers="const">
 			<return type="AudioStreamGenerator" />
 			<description>
-				Returns the internal [AudioStreamGenerator] instance.
 			</description>
 		</method>
 		<method name="get_bitrate" qualifiers="const">
 			<return type="float" />
 			<description>
-				Returns the bitrate value used for quantization. See also [method create].
 			</description>
 		</method>
 		<method name="get_buffer_length" qualifiers="const">
 			<return type="int" />
 			<description>
-				Returns the target size of the generated buffer. See also [method create].
+				Returns the audio buffer length in samples.
+
+				[b]Returns:[/b] Buffer length (2048, 4096, or 8192)
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create(4096)
+				add_child(driver)
+				
+				print("Buffer length: ", driver.get_buffer_length())  # 4096
+				[/codeblock]
 			</description>
 		</method>
 		<method name="get_channel_num" qualifiers="const">
 			<return type="int" />
 			<description>
-				Returns the number of output channels. See also [method create].
+				Returns the number of audio output channels.
+
+				[b]Returns:[/b] Number of channels (1 for mono, 2 for stereo)
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create(2048, 2)
+				add_child(driver)
+				
+				print("Channels: ", driver.get_channel_num())  # 2
+				[/codeblock]
 			</description>
 		</method>
 		<method name="get_compiling_time" qualifiers="const">
 			<return type="int" />
 			<description>
-				Returns the time it took to perform the last compile task (including calls to [method play]).
+				Returns the time taken for the last compilation in milliseconds.
+
+				[b]Returns:[/b] Compilation time in milliseconds
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create()
+				add_child(driver)
+				
+				var data = driver.compile("t120 l8 cdefgab&gt;c")
+				print("Compilation took: ", driver.get_compiling_time(), "ms")
+				[/codeblock]
 			</description>
 		</method>
 		<method name="get_data" qualifiers="const">
 			<return type="SiONData" />
 			<description>
-				Returns current data set previously by [method play], [method compile], or [method render].
+				Returns the currently loaded music data.
+
+				[b]Returns:[/b] SiONData object or null if no data is loaded
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create()
+				add_child(driver)
+				
+				var mml = "t120 l8 cdefgab&gt;c"
+				var data = driver.compile(mml)
+				
+				# Get the loaded data
+				var current_data = driver.get_data()
+				if current_data:
+					print("Data is loaded")
+				[/codeblock]
 			</description>
 		</method>
 		<method name="get_effector" qualifiers="const">
 			<return type="SiEffector" />
 			<description>
-				Returns a reference to the [SiEffector] instance. You can use it to control global effects and filters.
 			</description>
 		</method>
 		<method name="get_processing_time" qualifiers="const">
 			<return type="int" />
 			<description>
-				Returns the average processing time during streaming.
+				Returns the average audio processing time per second in milliseconds.
+
+				[b]Returns:[/b] Average processing time in milliseconds
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create()
+				add_child(driver)
+				
+				driver.play("t120 l8 cdefgab&gt;c")
+				
+				# Check processing time after some playback
+				await get_tree().create_timer(1.0).timeout
+				print("Average processing time: ", driver.get_processing_time(), "ms")
+				[/codeblock]
 			</description>
 		</method>
 		<method name="get_queue_job_progress" qualifiers="const">
 			<return type="float" />
 			<description>
-				Returns the progress of the current job item in the execution queue, as a value between [code]0.0[/code] and [code]1.0[/code].
 			</description>
 		</method>
 		<method name="get_queue_length" qualifiers="const">
 			<return type="int" />
 			<description>
-				Returns the remaining size of the execution queue.
 			</description>
 		</method>
 		<method name="get_queue_total_progress" qualifiers="const">
 			<return type="float" />
 			<description>
-				Returns the total progress between all jobs in the execution queue, as a value between [code]0.0[/code] and [code]1.0[/code]. The progress is calculated against the queue size at the time of the last [method start_queue] call.
 			</description>
 		</method>
 		<method name="get_rendering_time" qualifiers="const">
 			<return type="int" />
 			<description>
-				Returns the time it took to perform the last render task.
+				Returns the time taken for the last rendering operation in milliseconds.
+
+				[b]Returns:[/b] Rendering time in milliseconds
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create()
+				add_child(driver)
+				
+				var buffer = driver.render("t120 l8 cdefgab&gt;c", 44100 * 5, 2)
+				print("Rendering took: ", driver.get_rendering_time(), "ms")
+				[/codeblock]
 			</description>
 		</method>
 		<method name="get_sample_rate" qualifiers="const">
 			<return type="float" />
 			<description>
-				Returns the sampling rate. See also [method create].
+				Returns the audio sample rate in Hz.
+
+				[b]Returns:[/b] Sample rate (currently always 44100)
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create()
+				add_child(driver)
+				
+				print("Sample rate: ", driver.get_sample_rate())  # 44100.0
+				[/codeblock]
 			</description>
 		</method>
 		<method name="get_sequencer" qualifiers="const">
 			<return type="SiMMLSequencer" />
 			<description>
-				Returns a reference to the [SiMMLSequencer] instance.
 			</description>
 		</method>
 		<method name="get_sound_chip" qualifiers="const">
 			<return type="SiOPMSoundChip" />
 			<description>
-				Returns a reference to the [SiOPMSoundChip] instance.
 			</description>
 		</method>
 		<method name="get_track_count" qualifiers="const">
 			<return type="int" />
 			<description>
-				Returns the number of active tracks in the sequencer.
+				Returns the number of currently active tracks. Only works when streaming.
+
+				[b]Returns:[/b] Number of active tracks
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create()
+				add_child(driver)
+				driver.stream()
+				
+				driver.note_on(60)
+				driver.note_on(64)
+				print("Active tracks: ", driver.get_track_count())  # 2
+				[/codeblock]
 			</description>
 		</method>
 		<method name="get_version" qualifiers="static">
 			<return type="String" />
 			<description>
-				Returns the current version number as a string.
 			</description>
 		</method>
 		<method name="get_version_flavor" qualifiers="static">
 			<return type="String" />
 			<description>
-				Returns the flavor of the current version, e.g. "stable" or "beta1".
+			</description>
+		</method>
+		<method name="get_volume" qualifiers="const">
+			<return type="float" />
+			<description>
+				Returns the current master volume level.
+
+				[b]Returns:[/b] Volume level between 0.0 and 1.0
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create()
+				add_child(driver)
+				
+				print("Current volume: ", driver.get_volume())  # 1.0
+				driver.set_volume(0.5)
+				print("New volume: ", driver.get_volume())     # 0.5
+				[/codeblock]
+			</description>
+		</method>
+		<method name="get_bpm" qualifiers="const">
+			<return type="float" />
+			<description>
+				Returns the current BPM (beats per minute) of the sequencer.
+
+				[b]Returns:[/b] BPM value (1-4000)
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create()
+				add_child(driver)
+				
+				driver.play("t120 l8 cdefgab&gt;c")
+				print("Current BPM: ", driver.get_bpm())  # 120.0
+				[/codeblock]
+			</description>
+		</method>
+		<method name="get_max_track_count" qualifiers="const">
+			<return type="int" />
+			<description>
+				Returns the maximum number of tracks that can be active simultaneously.
+
+				[b]Returns:[/b] Maximum track count
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create()
+				add_child(driver)
+				
+				print("Max tracks: ", driver.get_max_track_count())
+				driver.set_max_track_count(16)
+				print("New max tracks: ", driver.get_max_track_count())
+				[/codeblock]
 			</description>
 		</method>
 		<method name="is_paused" qualifiers="const">
 			<return type="bool" />
 			<description>
-				Returns whether the streaming process is paused. See [method pause] and [method resume].
+				Returns whether audio playback is currently paused.
+
+				[b]Returns:[/b] true if paused, false otherwise
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create()
+				add_child(driver)
+				
+				driver.play("t120 l8 cdefgab&gt;c")
+				print("Paused: ", driver.is_paused())  # false
+				
+				driver.pause()
+				print("Paused: ", driver.is_paused())  # true
+				
+				driver.resume()
+				print("Paused: ", driver.is_paused())  # false
+				[/codeblock]
 			</description>
 		</method>
 		<method name="is_queue_executing" qualifiers="const">
 			<return type="bool" />
 			<description>
-				Returns whether the job queue is currently executing jobs.
 			</description>
 		</method>
 		<method name="is_streaming" qualifiers="const">
 			<return type="bool" />
 			<description>
-				Returns whether the driver is currently streaming (regardless of the paused flag). See [method stream] and [method play].
+				Returns whether the driver is currently streaming audio.
+
+				[b]Returns:[/b] true if streaming, false otherwise
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create()
+				add_child(driver)
+				
+				print("Streaming: ", driver.is_streaming())  # false
+				driver.stream()
+				print("Streaming: ", driver.is_streaming())  # true
+				driver.stop()
+				print("Streaming: ", driver.is_streaming())  # false
+				[/codeblock]
 			</description>
 		</method>
 		<method name="note_off">
@@ -190,9 +443,33 @@
 			<param index="3" name="quantize" type="float" default="0" />
 			<param index="4" name="stop_immediately" type="bool" default="false" />
 			<description>
-				Executes a note off event for all matching tracks (see also [method SiMMLTrack.get_track_id]). Returns affected tracks.
-				[param delay] and [param quantize] must be in 1/16th of a beat.
-				[b]Note:[/b] Streaming must be initialized before this method is called (see [method stream]).
+				Stops playing a specific note or all notes in a track.
+
+				[b]Parameters:[/b]
+				• [code]note[/code] - MIDI note number to stop (-1 to stop all notes in the track)
+				• [code]track_id[/code] - Track ID to target (0 for all tracks)
+				• [code]delay[/code] - Delay before stopping in 1/16th beats
+				• [code]quantize[/code] - Quantization grid size in 1/16th beats
+				• [code]stop_immediately[/code] - Whether to stop immediately or let the note fade out
+
+				[b]Returns:[/b] Array of affected SiMMLTrack objects
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create()
+				add_child(driver)
+				driver.stream()
+
+				# Play a note
+				driver.note_on(60)
+				
+				# Stop it after 2 seconds
+				await get_tree().create_timer(2.0).timeout
+				driver.note_off(60)
+
+				# Stop all notes in track 1
+				driver.note_off(-1, 1)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="note_on">
@@ -205,10 +482,37 @@
 			<param index="5" name="track_id" type="int" default="0" />
 			<param index="6" name="disposable" type="bool" default="true" />
 			<description>
-				Executes a note on event using the given voice. Returns the affected, or newly created, track (see also [method SiMMLTrack.get_track_id]).
-				If [param length] is set to [code]0[/code], the note will play continuously, according to the voice configuration. It can die off naturally, but it can also continue playing until the [method note_off] method is called explicitly. [param length], [param delay], and [param quantize] must be in 1/16th of a beat.
-				Use [param disposable] to control whether the created track can be freed after being used. Non-disposable tracks must be treated with care as it can lead to performance penalties.
-				[b]Note:[/b] Streaming must be initialized before this method is called (see [method stream]).
+				Plays a single note. The driver must be streaming (call [method stream] first) to use this method.
+
+				[b]Parameters:[/b]
+				• [code]note[/code] - MIDI note number (0-127, where 60 is middle C)
+				• [code]voice[/code] - SiONVoice object defining the instrument sound (optional)
+				• [code]length[/code] - Note length in 1/16th beats (0 = use default length)
+				• [code]delay[/code] - Delay before playing in 1/16th beats
+				• [code]quantize[/code] - Quantization grid size in 1/16th beats
+				• [code]track_id[/code] - Unique identifier for the track
+				• [code]disposable[/code] - Whether the track should be automatically cleaned up
+
+				[b]Returns:[/b] The created SiMMLTrack object
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create()
+				add_child(driver)
+				driver.stream()
+
+				# Play a C major chord
+				driver.note_on(60)  # C
+				driver.note_on(64)  # E
+				driver.note_on(67)  # G
+
+				# Play with custom voice and timing
+				var voice = SiONVoice.new()
+				voice.set_module_type(SiONModuleType.MODULE_FM)
+				driver.note_on(72, voice, 4.0, 2.0)  # High C, 1 beat, 1/8 beat delay
+				[/codeblock]
+
+				[b]Note:[/b] Use [method note_off] to stop notes, or they will play until the end of their length.
 			</description>
 		</method>
 		<method name="note_on_with_bend">
@@ -223,15 +527,52 @@
 			<param index="7" name="track_id" type="int" default="0" />
 			<param index="8" name="disposable" type="bool" default="true" />
 			<description>
-				Executes a note on event with pitch bending applied using the given voice. Returns the affected, or newly created, track (see also [method SiMMLTrack.get_track_id]).
-				The resulting pitch is bent from [param note] to [param note_to] over the course of [param bend_length], which must be in 1/16th of a beat. This length cannot be more than the length of the note and will be truncated to fit. This does not affect continuous notes that have the length of [code]0[/code].
-				See also [method note_on].
+				Plays a note with pitch bending from one note to another.
+
+				[b]Parameters:[/b]
+				• [code]note[/code] - Starting MIDI note number
+				• [code]note_to[/code] - Target MIDI note number for the bend
+				• [code]bend_length[/code] - Duration of the pitch bend in 1/16th beats
+				• [code]voice[/code] - SiONVoice object defining the instrument sound (optional)
+				• [code]length[/code] - Total note length in 1/16th beats
+				• [code]delay[/code] - Delay before playing in 1/16th beats
+				• [code]quantize[/code] - Quantization grid size in 1/16th beats
+				• [code]track_id[/code] - Unique identifier for the track
+				• [code]disposable[/code] - Whether the track should be automatically cleaned up
+
+				[b]Returns:[/b] The created SiMMLTrack object
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create()
+				add_child(driver)
+				driver.stream()
+
+				# Play a note that bends from C to E
+				driver.note_on_with_bend(60, 64, 4.0)  # C to E over 1 beat
+				[/codeblock]
 			</description>
 		</method>
 		<method name="pause">
 			<return type="void" />
 			<description>
-				Pauses streaming initialized by [method stream] or [method play].
+				Pauses audio playback while keeping the current state. Use [method resume] to continue playback from where it was paused.
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create()
+				add_child(driver)
+
+				driver.play("t120 l8 cdefgab&gt;c")
+
+				# Pause when player presses P
+				if Input.is_action_just_pressed("pause_music"):
+					driver.pause()
+
+				# Resume when player presses R
+				if Input.is_action_just_pressed("resume_music"):
+					driver.resume()
+				[/codeblock]
 			</description>
 		</method>
 		<method name="play">
@@ -239,21 +580,61 @@
 			<param index="0" name="data" type="Variant" />
 			<param index="1" name="reset_effector" type="bool" default="true" />
 			<description>
-				Starts streaming using the data provided, which is played immediately. If the driver is already streaming, it is gracefully stopped first (see [method stop]). Paused streams are terminated as well.
-				To start streaming without any data, call [method stream] instead.
-				[codeblocks]
-				[gdscript]
-					driver.play("t100 l8 [ ccggaag4 ffeeddc4 | [ggffeed4]2 ]2")
-				[/gdscript]
-				[/codeblocks]
+				Plays compiled music data. The data can be either a SiONData object or an MML string (which will be compiled automatically).
+
+				[b]Parameters:[/b]
+				• [code]data[/code] - SiONData object or MML string to play
+				• [code]reset_effector[/code] - Whether to reset audio effects before playing
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create()
+				add_child(driver)
+
+				# Play compiled data
+				var mml = "t120 l8 cdefgab&gt;c"
+				var data = driver.compile(mml)
+				driver.play(data)
+
+				# Play MML string directly
+				driver.play("t120 l8 cdefgab&gt;c")
+
+				# Play with effects preserved
+				driver.play(data, false)
+				[/codeblock]
+
+				[b]Note:[/b] This method automatically starts streaming if not already active. Use [method stop] to stop playback.
 			</description>
 		</method>
 		<method name="queue_compile">
 			<return type="int" />
 			<param index="0" name="mml" type="String" />
 			<description>
-				Adds a compile task to the execution queue instead of compiling immediately. See also [method compile] and [method start_queue].
-				Compiled data can be retrieved via the [signal compilation_finished] signal.
+				Adds a compilation job to the processing queue. This is useful for compiling long MML strings without blocking the main thread.
+
+				[b]Parameters:[/b]
+				• [code]mml[/code] - MML string to compile
+
+				[b]Returns:[/b] Number of jobs in the queue
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create()
+				add_child(driver)
+
+				# Queue compilation
+				var job_id = driver.queue_compile("t120 l8 cdefgab&gt;c")
+
+				# Start processing the queue
+				driver.start_queue()
+
+				# Connect to the completion signal
+				driver.compilation_finished.connect(_on_compilation_finished)
+
+				func _on_compilation_finished(data):
+					print("Compilation finished!")
+					driver.play(data)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="queue_render">
@@ -263,8 +644,34 @@
 			<param index="2" name="buffer_channel_num" type="int" default="2" />
 			<param index="3" name="reset_effector" type="bool" default="false" />
 			<description>
-				Adds a render task to the execution queue instead of rendering immediately. See also [method render] and [method start_queue].
-				Rendered buffer can be retrieved via the [signal render_finished] signal.
+				Adds a rendering job to the processing queue. This is useful for rendering long pieces without blocking the main thread.
+
+				[b]Parameters:[/b]
+				• [code]data[/code] - SiONData object or MML string to render
+				• [code]buffer_size[/code] - Size of the output buffer in samples
+				• [code]buffer_channel_num[/code] - Number of channels in output (1 for mono, 2 for stereo)
+				• [code]reset_effector[/code] - Whether to reset audio effects before rendering
+
+				[b]Returns:[/b] Number of jobs in the queue
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create()
+				add_child(driver)
+
+				# Queue rendering
+				var job_id = driver.queue_render("t120 l8 cdefgab&gt;c", 44100 * 10, 2)
+
+				# Start processing the queue
+				driver.start_queue()
+
+				# Connect to the completion signal
+				driver.render_finished.connect(_on_render_finished)
+
+				func _on_render_finished(buffer):
+					print("Rendering finished! Buffer size: ", buffer.size())
+					# Save buffer to file or use it elsewhere
+				[/codeblock]
 			</description>
 		</method>
 		<method name="render">
@@ -274,19 +681,65 @@
 			<param index="2" name="buffer_channel_num" type="int" default="2" />
 			<param index="3" name="reset_effector" type="bool" default="true" />
 			<description>
-				Renders the given data into an audio buffer. The buffer can be converted into a stereo [PackedVector2Array] buffer and passed to [AudioStreamGeneratorPlayback] or saved as a wave file.
+				Renders music data to an audio buffer. This is useful for exporting music to files or creating audio data for other purposes.
+
+				[b]Parameters:[/b]
+				• [code]data[/code] - SiONData object or MML string to render
+				• [code]buffer_size[/code] - Size of the output buffer in samples
+				• [code]buffer_channel_num[/code] - Number of channels in output (1 for mono, 2 for stereo)
+				• [code]reset_effector[/code] - Whether to reset audio effects before rendering
+
+				[b]Returns:[/b] PackedFloat64Array containing the rendered audio samples
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create()
+				add_child(driver)
+
+				# Render a simple melody
+				var mml = "t120 l8 cdefgab&gt;c"
+				var audio_buffer = driver.render(mml, 44100 * 5, 2)  # 5 seconds of stereo audio
+
+				# Save to file (you'd need to implement the file saving logic)
+				print("Rendered ", audio_buffer.size(), " samples")
+				[/codeblock]
+
+				[b]Note:[/b] This method is synchronous and will block until rendering is complete. For long pieces, consider using [method queue_render] instead.
 			</description>
 		</method>
 		<method name="reset">
 			<return type="void" />
 			<description>
-				Resets all available tracks in the sequencer.
+				Resets all tracks to their initial state without stopping playback. This is useful for restarting sequences or clearing track states.
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create()
+				add_child(driver)
+				driver.stream()
+				
+				# Play some notes
+				driver.note_on(60)
+				driver.note_on(64)
+				
+				# Reset tracks (stops all notes)
+				driver.reset()
+				
+				# Play new notes
+				driver.note_on(67)
+				driver.note_on(72)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="resume">
 			<return type="void" />
 			<description>
-				Resumes streaming previously paused by [method pause].
+				Resumes audio playback after being paused with [method pause].
+
+				[b]Example:[/b]
+				[codeblock]
+				# See [method pause] for complete example
+				[/codeblock]
 			</description>
 		</method>
 		<method name="sample_on">
@@ -298,22 +751,31 @@
 			<param index="4" name="track_id" type="int" default="0" />
 			<param index="5" name="disposable" type="bool" default="true" />
 			<description>
-				Plays the sound for the given sample number. Returns the affected, or newly created, track (see also [method SiMMLTrack.get_track_id]).
-				[param length], [param delay], and [param quantize] must be in 1/16th of a beat.
-				Use [param disposable] to control whether the track can be freed after being used. Making a track non-disposable must be treated with care as it can lead to performance penalties.
-				[b]Note:[/b] Streaming must be initialized before this method is called (see [method stream]).
-			</description>
-		</method>
-		<method name="sequence_off">
-			<return type="SiMMLTrack[]" />
-			<param index="0" name="track_id" type="int" />
-			<param index="1" name="delay" type="float" default="0" />
-			<param index="2" name="quantize" type="float" default="1" />
-			<param index="3" name="stop_with_reset" type="bool" default="false" />
-			<description>
-				Stops execution of sequences for all matching tracks (see also [method SiMMLTrack.get_track_id]). Returns affected tracks.
-				[param delay] and [param quantize] must be in 1/16th of a beat.
-				[b]Note:[/b] Streaming must be initialized before this method is called (see [method stream]).
+				Plays a PCM sample by its index number. Samples must be registered using [method set_pcm_wave] or [method set_sampler_wave] first.
+
+				[b]Parameters:[/b]
+				• [code]sample_number[/code] - Index of the registered sample
+				• [code]length[/code] - Playback length in 1/16th beats (0 = play full sample)
+				• [code]delay[/code] - Delay before playing in 1/16th beats
+				• [code]quantize[/code] - Quantization grid size in 1/16th beats
+				• [code]track_id[/code] - Unique identifier for the track
+				• [code]disposable[/code] - Whether the track should be automatically cleaned up
+
+				[b]Returns:[/b] The created SiMMLTrack object
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create()
+				add_child(driver)
+				driver.stream()
+
+				# Register a PCM sample (you need actual audio data)
+				var audio_data = load("res://sounds/drum.wav")
+				driver.set_pcm_wave(0, audio_data, 60)  # Register as sample 0
+
+				# Play the sample
+				driver.sample_on(0, 2.0)  # Play for 1/8 beat
+				[/codeblock]
 			</description>
 		</method>
 		<method name="sequence_on">
@@ -326,508 +788,681 @@
 			<param index="5" name="track_id" type="int" default="0" />
 			<param index="6" name="disposable" type="bool" default="true" />
 			<description>
-				Executes a sequence, or sequences, provided by the given data and using the given voice. Returns affected, or newly created, tracks (see also [method SiMMLTrack.get_track_id]).
-				[param length], [param delay], and [param quantize] must be in 1/16th of a beat.
-				Use [param disposable] to control whether the created track can be freed after being used. Non-disposable tracks must be treated with care as it can lead to performance penalties.
-				[b]Note:[/b] Streaming must be initialized before this method is called (see [method stream]).
+				Plays a specific sequence from compiled SiONData. This allows you to play individual tracks or sections of music.
+
+				[b]Parameters:[/b]
+				• [code]data[/code] - SiONData object containing the sequence to play
+				• [code]voice[/code] - SiONVoice object to apply to all tracks in the sequence (optional)
+				• [code]length[/code] - Playback length in 1/16th beats (0 = play full sequence)
+				• [code]delay[/code] - Delay before playing in 1/16th beats
+				• [code]quantize[/code] - Quantization grid size in 1/16th beats
+				• [code]track_id[/code] - Unique identifier for the sequence tracks
+				• [code]disposable[/code] - Whether the tracks should be automatically cleaned up
+
+				[b]Returns:[/b] Array of created SiMMLTrack objects
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create()
+				add_child(driver)
+				driver.stream()
+
+				# Compile music with multiple tracks
+				var mml = """
+				#TRACK1 t120 l8 cdefgab&gt;c
+				#TRACK2 t120 l4 o3 cegc
+				"""
+				var data = driver.compile(mml)
+
+				# Play only the melody track
+				var tracks = driver.sequence_on(data, null, 0, 0, 1, 1)
+				[/codeblock]
+			</description>
+		</method>
+		<method name="sequence_off">
+			<return type="SiMMLTrack[]" />
+			<param index="0" name="track_id" type="int" />
+			<param index="1" name="delay" type="float" default="0" />
+			<param index="2" name="quantize" type="float" default="1" />
+			<param index="3" name="stop_with_reset" type="bool" default="false" />
+			<description>
+				Stops all sequence tracks with the specified track ID.
+
+				[b]Parameters:[/b]
+				• [code]track_id[/code] - Track ID to stop
+				• [code]delay[/code] - Delay before stopping in 1/16th beats
+				• [code]quantize[/code] - Quantization grid size in 1/16th beats
+				• [code]stop_with_reset[/code] - Whether to reset the sequence state
+
+				[b]Returns:[/b] Array of affected SiMMLTrack objects
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create()
+				add_child(driver)
+				driver.stream()
+
+				# Start a sequence
+				var data = driver.compile("t120 l8 cdefgab&gt;c")
+				driver.sequence_on(data, null, 0, 0, 1, 1)
+
+				# Stop it after 5 seconds
+				await get_tree().create_timer(5.0).timeout
+				driver.sequence_off(1)
+				[/codeblock]
 			</description>
 		</method>
 		<method name="set_beat_callback_interval">
 			<return type="void" />
 			<param index="0" name="length_16th" type="float" />
 			<description>
-				Sets an interval for the beat track event, in 1/16ths of a beat. Only power-of-two values are allowed.
 			</description>
 		</method>
 		<method name="set_beat_event_enabled">
 			<return type="void" />
 			<param index="0" name="enabled" type="bool" />
 			<description>
-				Enables or disables reporting of the beat track event. Beat events are fired at a quick pace, so handling of them can become a performance bottleneck.
 			</description>
 		</method>
 		<method name="set_fading_event_enabled">
 			<return type="void" />
 			<param index="0" name="enabled" type="bool" />
 			<description>
-				Enables or disables reporting of the fading track event.
 			</description>
 		</method>
 		<method name="set_stream_event_enabled">
 			<return type="void" />
 			<param index="0" name="enabled" type="bool" />
 			<description>
-				Enables or disables reporting of the stream track event.
 			</description>
 		</method>
 		<method name="set_timer_interval">
 			<return type="void" />
 			<param index="0" name="length_16th" type="float" />
 			<description>
-				Sets an interval for the integrated timer, in 1/16ths of a beat. This can be used as a metronome for the purposes of synchronizing note on/off events. Setting this interval to [code]0[/code] disables the timer.
 			</description>
 		</method>
 		<method name="start_queue">
 			<return type="int" />
 			<param index="0" name="interval" type="int" default="500" />
 			<description>
-				Starts executing tasks in the execution queue. Use [param interval] to space the tasks out a bit.
 			</description>
 		</method>
 		<method name="stop">
 			<return type="void" />
 			<description>
-				Stops streaming initialized by [method stream] or [method play]. Attempts to stop gracefully if triggered while processing.
+				Stops all audio playback and streaming. This method clears all tracks, stops the audio player, and resets the driver state.
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create()
+				add_child(driver)
+
+				# Play some music
+				driver.play("t120 l8 cdefgab&gt;c")
+
+				# Stop after 5 seconds
+				await get_tree().create_timer(5.0).timeout
+				driver.stop()
+				[/codeblock]
 			</description>
 		</method>
 		<method name="stream">
 			<return type="void" />
 			<param index="0" name="reset_effector" type="bool" default="true" />
 			<description>
-				Starts driver streaming, allowing you to use it in the interactive mode. See [method note_on], [method note_off], [method sequence_on], and [method sequence_off].
-				To immediately play some data, use [method play] instead.
-				[codeblocks]
-				[gdscript]
-					driver.stream()
-					driver.note_on(42, SiONVoice.new(), 4)
-				[/gdscript]
-				[/codeblocks]
+				Starts audio streaming without playing any music. This is useful when you want to use note-by-note playback methods like [method note_on] and [method sample_on].
+
+				[b]Parameters:[/b]
+				• [code]reset_effector[/code] - Whether to reset audio effects
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create()
+				add_child(driver)
+
+				# Start streaming for interactive music
+				driver.stream()
+
+				# Now you can play individual notes
+				driver.note_on(60)  # Play middle C
+				driver.note_on(64)  # Play E
+				driver.note_on(67)  # Play G
+				[/codeblock]
+			</description>
+		</method>
+		<method name="fade_in">
+			<return type="void" />
+			<param index="0" name="time" type="float" />
+			<description>
+				Gradually increases the volume from 0 to the current volume level over the specified time.
+
+				[b]Parameters:[/b]
+				• [code]time[/code] - Fade-in duration in seconds
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create()
+				add_child(driver)
+				
+				driver.set_volume(0.0)  # Start silent
+				driver.play("t120 l8 cdefgab&gt;c")
+				driver.fade_in(2.0)     # Fade in over 2 seconds
+				[/codeblock]
+			</description>
+		</method>
+		<method name="fade_out">
+			<return type="void" />
+			<param index="0" name="time" type="float" />
+			<description>
+				Gradually decreases the volume from the current level to 0 over the specified time.
+
+				[b]Parameters:[/b]
+				• [code]time[/code] - Fade-out duration in seconds
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create()
+				add_child(driver)
+				
+				driver.play("t120 l8 cdefgab&gt;c")
+				
+				# Fade out after 5 seconds
+				await get_tree().create_timer(5.0).timeout
+				driver.fade_out(3.0)  # Fade out over 3 seconds
+				[/codeblock]
 			</description>
 		</method>
 	</methods>
 	<members>
-		<member name="bpm" type="float" setter="set_bpm" getter="get_bpm" default="120.0">
-			Beats per minute, or tempo, of the output. Values between [code]1[/code] and [code]4000[/code] are allowed.
+		<member name="bpm" type="float" setter="set_bpm" getter="get_bpm" default="0.0">
+			The current BPM (beats per minute) of the sequencer. This affects the timing of all music playback.
+
+			[b]Range:[/b] 1.0 to 4000.0
+
+			[b]Example:[/b]
+			[codeblock]
+			var driver = SiONDriver.create()
+			add_child(driver)
+			
+			driver.bpm = 120.0  # Set to 120 BPM
+			driver.play("l8 cdefgab&gt;c")  # Play without tempo command
+			[/codeblock]
 		</member>
-		<member name="max_track_count" type="int" setter="set_max_track_count" getter="get_max_track_count" default="128">
-			Maximum number of tracks that can exist at the same time.
+		<member name="max_track_count" type="int" setter="set_max_track_count" getter="get_max_track_count" default="0">
+			The maximum number of tracks that can be active simultaneously. This limits memory usage and performance impact.
+
+			[b]Range:[/b] 1 or higher
+
+			[b]Example:[/b]
+			[codeblock]
+			var driver = SiONDriver.create()
+			add_child(driver)
+			
+			driver.max_track_count = 16  # Allow up to 16 simultaneous tracks
+			driver.stream()
+			
+			# Now you can play up to 16 notes at once
+			for i in range(16):
+				driver.note_on(60 + i)
+			[/codeblock]
 		</member>
 		<member name="volume" type="float" setter="set_volume" getter="get_volume" default="1.0">
-			Base volume of the output, before fading is applied. The volume is set as a linear value between [code]0.0[/code] and [code]1[/code].
+			The master volume level for all audio output.
+
+			[b]Range:[/b] 0.0 to 1.0 (0.0 = silent, 1.0 = full volume)
+
+			[b]Example:[/b]
+			[codeblock]
+			var driver = SiONDriver.create()
+			add_child(driver)
+			
+			driver.volume = 0.5  # Set to 50% volume
+			driver.play("t120 l8 cdefgab&gt;c")
+			
+			# Gradually increase volume
+			for i in range(10):
+				driver.volume = i * 0.1
+				await get_tree().create_timer(0.1).timeout
+			[/codeblock]
 		</member>
 	</members>
 	<signals>
 		<signal name="bpm_changed">
 			<param index="0" name="event" type="SiONTrackEvent" />
 			<description>
-				Emitted when tempo/beats per minute changes in the sequencer. This can be triggered by a command in the parsed MML string.
+				Emitted when the BPM changes during playback. This can happen due to tempo commands in MML or programmatic changes.
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create()
+				add_child(driver)
+				
+				driver.bpm_changed.connect(_on_bpm_changed)
+				driver.play("t120 l8 cdefgab&gt;c t180 l8 cdefgab&gt;c")
+				
+				func _on_bpm_changed(event):
+					print("BPM changed to: ", driver.bpm)
+				[/codeblock]
 			</description>
 		</signal>
 		<signal name="compilation_finished">
 			<param index="0" name="data" type="SiONData" />
 			<description>
-				Emitted when when a compilation task, either queued via [method queue_compile] or executed immediately via [method compile], finishes. The compiled data is passed as the sole argument.
+				Emitted when a compilation job (from [method queue_compile]) is completed.
+
+				[b]Parameters:[/b]
+				• [code]data[/code] - The compiled SiONData object
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create()
+				add_child(driver)
+				
+				driver.compilation_finished.connect(_on_compilation_finished)
+				driver.queue_compile("t120 l8 cdefgab&gt;c")
+				driver.start_queue()
+				
+				func _on_compilation_finished(data):
+					print("Compilation finished!")
+					driver.play(data)
+				[/codeblock]
 			</description>
 		</signal>
 		<signal name="fade_in_completed">
 			<param index="0" name="event" type="SiONEvent" />
 			<description>
-				Emitted if the fader is used and after the fading in has finished. This signal is emitted after the [signal streaming] signal. Contains a [SiONDriver] instance, a [SiONData] instance (if [method play] was called instead of [method stream]), and the streaming buffer as a byte array.
 			</description>
 		</signal>
 		<signal name="fade_out_completed">
 			<param index="0" name="event" type="SiONEvent" />
 			<description>
-				Emitted if the fader is used and after the fading out has finished. This signal is emitted after the [signal streaming] signal. Contains a [SiONDriver] instance, a [SiONData] instance (if [method play] was called instead of [method stream]), and the streaming buffer as a byte array.
 			</description>
 		</signal>
 		<signal name="fading">
 			<param index="0" name="event" type="SiONEvent" />
 			<description>
-				Emitted if the fader is used and while the fading is happening. This signal is emitted after the [signal streaming] signal. Contains a [SiONDriver] instance and a [SiONData] instance (if [method play] was called instead of [method stream]).
 			</description>
 		</signal>
 		<signal name="note_off_frame">
 			<param index="0" name="event" type="SiONTrackEvent" />
 			<description>
-				Emitted after the note off event is triggered in the sequencer when the event trigger type is "frame" (meaning delayed dispatch). This can be triggered by a command in the parsed MML string.
 			</description>
 		</signal>
 		<signal name="note_off_stream">
 			<param index="0" name="event" type="SiONTrackEvent" />
 			<description>
-				Emitted after the note off event is triggered in the sequencer when the event trigger type is "stream" (meaning immediate dispatch). This can be triggered by a command in the parsed MML string.
 			</description>
 		</signal>
 		<signal name="note_on_frame">
 			<param index="0" name="event" type="SiONTrackEvent" />
 			<description>
-				Emitted after the note on event is triggered in the sequencer when the event trigger type is "frame" (meaning delayed dispatch). This can be triggered by a command in the parsed MML string.
 			</description>
 		</signal>
 		<signal name="note_on_stream">
 			<param index="0" name="event" type="SiONTrackEvent" />
 			<description>
-				Emitted after the note on event is triggered in the sequencer when the event trigger type is "stream" (meaning immediate dispatch). This can be triggered by a command in the parsed MML string.
+				Emitted when a note starts playing during streaming. This is useful for visual feedback or synchronization.
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create()
+				add_child(driver)
+				
+				driver.note_on_stream.connect(_on_note_on)
+				driver.stream()
+				driver.note_on(60)
+				
+				func _on_note_on(event):
+					print("Note started: ", event.note)
+					# Trigger visual effect or animation
+				[/codeblock]
 			</description>
 		</signal>
 		<signal name="queue_cancelled">
 			<param index="0" name="event" type="SiONEvent" />
 			<description>
-				Emitted when the execution/rendering queue is cancelled. Contains a [SiONDriver] instance.
 			</description>
 		</signal>
 		<signal name="queue_completed">
 			<param index="0" name="event" type="SiONEvent" />
 			<description>
-				Emitted when the execution/rendering queue is completed. Contains a [SiONDriver] instance (with the processed MML string when compiling) and a [SiONData] instance.
 			</description>
 		</signal>
 		<signal name="queue_executing">
 			<param index="0" name="event" type="SiONEvent" />
 			<description>
-				Emitted when the execution/rendering queue is being processed. Contains a [SiONDriver] instance (with the processed MML string when compiling) and a [SiONData] instance (only when rendering).
 			</description>
 		</signal>
 		<signal name="render_finished">
 			<param index="0" name="buffer" type="PackedFloat64Array" />
 			<description>
-				Emitted when when a render task, either queued via [method queue_render] or executed immediately via [method render], finishes. The rendered buffer is passed as the sole argument.
+				Emitted when a rendering job (from [method queue_render]) is completed.
+
+				[b]Parameters:[/b]
+				• [code]buffer[/code] - The rendered audio buffer
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create()
+				add_child(driver)
+				
+				driver.render_finished.connect(_on_render_finished)
+				driver.queue_render("t120 l8 cdefgab&gt;c", 44100 * 5, 2)
+				driver.start_queue()
+				
+				func _on_render_finished(buffer):
+					print("Rendering finished! Buffer size: ", buffer.size())
+					# Save buffer to file or use it elsewhere
+				[/codeblock]
 			</description>
 		</signal>
 		<signal name="sequence_finished">
 			<param index="0" name="event" type="SiONEvent" />
 			<description>
-				Emitted when an individual sequence has finished during streaming. Contains a [SiONDriver] instance and a [SiONData] instance.
+				Emitted when a music sequence finishes playing.
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create()
+				add_child(driver)
+				
+				driver.sequence_finished.connect(_on_sequence_finished)
+				driver.play("t120 l8 cdefgab&gt;c")
+				
+				func _on_sequence_finished(event):
+					print("Music sequence finished!")
+					# Play next song or loop
+					driver.play("t120 l8 cdefgab&gt;c")
+				[/codeblock]
 			</description>
 		</signal>
 		<signal name="stream_started">
 			<param index="0" name="event" type="SiONEvent" />
 			<description>
-				Emitted after streaming has started. This signal is emitted before the first [signal streaming] signal. Contains a [SiONDriver] instance and a [SiONData] instance (if [method play] was called instead of [method stream]).
+				Emitted when audio streaming begins. This happens when you call [method stream] or [method play].
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create()
+				add_child(driver)
+				
+				driver.stream_started.connect(_on_stream_started)
+				driver.stream()
+				
+				func _on_stream_started(event):
+					print("Audio streaming started!")
+				[/codeblock]
 			</description>
 		</signal>
 		<signal name="stream_stopped">
 			<param index="0" name="event" type="SiONEvent" />
 			<description>
-				Emitted after streaming has stopped. Contains a [SiONDriver] instance and a [SiONData] instance (if [method play] was called instead of [method stream]).
+				Emitted when audio streaming stops. This happens when you call [method stop] or when playback ends.
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create()
+				add_child(driver)
+				
+				driver.stream_stopped.connect(_on_stream_stopped)
+				driver.play("t120 l8 cdefgab&gt;c")
+				
+				func _on_stream_stopped(event):
+					print("Audio streaming stopped!")
+				[/codeblock]
 			</description>
 		</signal>
 		<signal name="streaming">
 			<param index="0" name="event" type="SiONEvent" />
 			<description>
-				Emitted during streaming when a portion of the buffer is ready. Contains a [SiONDriver] instance, a [SiONData] instance (if [method play] was called instead of [method stream]), and the streaming buffer as a byte array.
-				See also [method set_stream_event_enabled].
 			</description>
 		</signal>
 		<signal name="streaming_beat">
 			<param index="0" name="event" type="SiONTrackEvent" />
 			<description>
-				Emitted at regular intervals by the sequencer. See also [method set_beat_event_enabled].
+				Emitted on each beat during streaming. Use [method set_beat_callback_interval] to control the frequency.
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create()
+				add_child(driver)
+				
+				driver.streaming_beat.connect(_on_beat)
+				driver.set_beat_callback_interval(1.0)  # Every quarter note
+				driver.play("t120 l8 cdefgab&gt;c")
+				
+				func _on_beat(event):
+					print("Beat!")
+					# Sync animations or effects to the beat
+				[/codeblock]
 			</description>
 		</signal>
 		<signal name="timer_interval">
 			<description>
-				Emitted at regular intervals by the internal timer. See also [method set_timer_interval].
+				Emitted at regular intervals during streaming. Use [method set_timer_interval] to control the frequency.
+
+				[b]Example:[/b]
+				[codeblock]
+				var driver = SiONDriver.create()
+				add_child(driver)
+				
+				driver.timer_interval.connect(_on_timer)
+				driver.set_timer_interval(4.0)  # Every 4 beats
+				driver.play("t120 l8 cdefgab&gt;c")
+				
+				func _on_timer():
+					print("Timer interval!")
+					# Perform periodic tasks
+				[/codeblock]
 			</description>
 		</signal>
 		<signal name="user_defined_event">
 			<param index="0" name="event" type="SiONTrackEvent" />
 			<description>
-				Emitted when a user defined event occurs.
 			</description>
 		</signal>
 	</signals>
 	<constants>
 		<constant name="CHIP_AUTO" value="-1" enum="SiONChipType">
-			Used to select the chip type automatically. See [method SiONVoice.get_mml].
 		</constant>
 		<constant name="CHIP_SIOPM" value="0" enum="SiONChipType">
-			Generic SiON sound chip type.
 		</constant>
 		<constant name="CHIP_OPL" value="1" enum="SiONChipType">
-			OPL sound chip type.
 		</constant>
 		<constant name="CHIP_OPM" value="2" enum="SiONChipType">
-			OPM sound chip type.
 		</constant>
 		<constant name="CHIP_OPN" value="3" enum="SiONChipType">
-			OPN sound chip type.
 		</constant>
 		<constant name="CHIP_OPX" value="4" enum="SiONChipType">
-			OPX sound chip type.
 		</constant>
 		<constant name="CHIP_MA3" value="5" enum="SiONChipType">
-			MA-3 sound chip type.
 		</constant>
 		<constant name="CHIP_PMS_GUITAR" value="6" enum="SiONChipType">
-			PMS guitar sound chip type.
 		</constant>
 		<constant name="CHIP_ANALOG_LIKE" value="7" enum="SiONChipType">
-			Analog-like sound chip type.
 		</constant>
 		<constant name="CHIP_MAX" value="8" enum="SiONChipType">
-			Total number of available chip types.
 		</constant>
 		<constant name="MODULE_PSG" value="0" enum="SiONModuleType">
-			PSG module type.
 		</constant>
 		<constant name="MODULE_APU" value="1" enum="SiONModuleType">
-			FC pAPU module type.
 		</constant>
 		<constant name="MODULE_NOISE" value="2" enum="SiONModuleType">
-			Noise wave module type.
 		</constant>
 		<constant name="MODULE_MA3" value="3" enum="SiONModuleType">
-			MA-3 module type.
 		</constant>
 		<constant name="MODULE_SCC" value="4" enum="SiONModuleType">
-			SCC-like wave table module type.
 		</constant>
 		<constant name="MODULE_GENERIC_PG" value="5" enum="SiONModuleType">
-			Generic pulse generator module type.
 		</constant>
 		<constant name="MODULE_FM" value="6" enum="SiONModuleType">
-			FM module type.
 		</constant>
 		<constant name="MODULE_PCM" value="7" enum="SiONModuleType">
-			PCM module type.
 		</constant>
 		<constant name="MODULE_PULSE" value="8" enum="SiONModuleType">
-			Pulse wave module type.
 		</constant>
 		<constant name="MODULE_RAMP" value="9" enum="SiONModuleType">
-			Ramp wave module type.
 		</constant>
 		<constant name="MODULE_SAMPLE" value="10" enum="SiONModuleType">
-			Sampler module type.
 		</constant>
 		<constant name="MODULE_KS" value="11" enum="SiONModuleType">
-			Karplus-Strong module type.
 		</constant>
 		<constant name="MODULE_GB" value="12" enum="SiONModuleType">
-			GameBoy-like module type.
 		</constant>
 		<constant name="MODULE_VRC6" value="13" enum="SiONModuleType">
-			VRC6 module type.
 		</constant>
 		<constant name="MODULE_SID" value="14" enum="SiONModuleType">
-			SID module type.
 		</constant>
 		<constant name="MODULE_FM_OPM" value="15" enum="SiONModuleType">
-			YM2151 module type (unused).
 		</constant>
 		<constant name="MODULE_FM_OPN" value="16" enum="SiONModuleType">
-			YM2203 module type (unused).
 		</constant>
 		<constant name="MODULE_FM_OPNA" value="17" enum="SiONModuleType">
-			YM2608 module type (unused).
 		</constant>
 		<constant name="MODULE_FM_OPLL" value="18" enum="SiONModuleType">
-			YM2413 module type (unused).
 		</constant>
 		<constant name="MODULE_FM_OPL3" value="19" enum="SiONModuleType">
-			YM3812 module type (unused).
 		</constant>
 		<constant name="MODULE_FM_MA3" value="20" enum="SiONModuleType">
-			YMU762 module type (unused).
 		</constant>
 		<constant name="MODULE_MAX" value="21" enum="SiONModuleType">
-			Total number of available module types.
 		</constant>
 		<constant name="PITCH_TABLE_OPM" value="0" enum="SiONPitchTableType">
-			OPM pitch table type.
 		</constant>
 		<constant name="PITCH_TABLE_PCM" value="1" enum="SiONPitchTableType">
-			PCM pitch table type.
 		</constant>
 		<constant name="PITCH_TABLE_PSG" value="2" enum="SiONPitchTableType">
-			PSG pitch table type.
 		</constant>
 		<constant name="PITCH_TABLE_OPM_NOISE" value="3" enum="SiONPitchTableType">
-			OPM noise pitch table type.
 		</constant>
 		<constant name="PITCH_TABLE_PSG_NOISE" value="4" enum="SiONPitchTableType">
-			PSG noise pitch table type.
 		</constant>
 		<constant name="PITCH_TABLE_APU_NOISE" value="5" enum="SiONPitchTableType">
-			APU noise pitch table type.
 		</constant>
 		<constant name="PITCH_TABLE_GB_NOISE" value="6" enum="SiONPitchTableType">
-			GameBoy-like noise pitch table type.
 		</constant>
 		<constant name="PITCH_TABLE_MAX" value="7" enum="SiONPitchTableType">
-			Total number of available pitch table types.
 		</constant>
 		<constant name="PULSE_SINE" value="0" enum="SiONPulseGeneratorType">
-			Sine wave pulse generator.
 		</constant>
 		<constant name="PULSE_SAW_UP" value="1" enum="SiONPulseGeneratorType">
-			Upwards saw wave pulse generator.
 		</constant>
 		<constant name="PULSE_SAW_DOWN" value="2" enum="SiONPulseGeneratorType">
-			Downwards saw wave pulse generator.
 		</constant>
 		<constant name="PULSE_TRIANGLE_FC" value="3" enum="SiONPulseGeneratorType">
-			Triangle wave pulse generator quantized by 4 bits.
 		</constant>
 		<constant name="PULSE_TRIANGLE" value="4" enum="SiONPulseGeneratorType">
-			Triangle wave pulse generator.
 		</constant>
 		<constant name="PULSE_SQUARE" value="5" enum="SiONPulseGeneratorType">
-			Square wave pulse generator.
 		</constant>
 		<constant name="PULSE_NOISE" value="6" enum="SiONPulseGeneratorType">
-			32k white noise pulse generator.
 		</constant>
 		<constant name="PULSE_KNM_BUBBLE" value="7" enum="SiONPulseGeneratorType">
-			Konami bubble system pulse generator.
 		</constant>
 		<constant name="PULSE_SYNC_LOW" value="8" enum="SiONPulseGeneratorType">
-			Low frequency pseudo sync pulse generator.
 		</constant>
 		<constant name="PULSE_SYNC_HIGH" value="9" enum="SiONPulseGeneratorType">
-			High frequency pseudo sync pulse generator.
 		</constant>
 		<constant name="PULSE_OFFSET" value="10" enum="SiONPulseGeneratorType">
-			Reserved value.
 		</constant>
 		<constant name="PULSE_SAW_VC6" value="11" enum="SiONPulseGeneratorType">
-			VC6 saw pulse generator (32-sample saw).
 		</constant>
 		<constant name="PULSE_NOISE_WHITE" value="16" enum="SiONPulseGeneratorType">
-			16k white noise pulse generator.
 		</constant>
 		<constant name="PULSE_NOISE_PULSE" value="17" enum="SiONPulseGeneratorType">
-			16k pulse noise pulse generator.
 		</constant>
 		<constant name="PULSE_NOISE_SHORT" value="18" enum="SiONPulseGeneratorType">
-			FC short noise pulse generator.
 		</constant>
 		<constant name="PULSE_NOISE_HIPASS" value="19" enum="SiONPulseGeneratorType">
-			FC high pass noise pulse generator.
 		</constant>
 		<constant name="PULSE_NOISE_PINK" value="20" enum="SiONPulseGeneratorType">
-			Pink noise pulse generator.
 		</constant>
 		<constant name="PULSE_NOISE_GB_SHORT" value="21" enum="SiONPulseGeneratorType">
-			GameBoy-like short noise pulse generator.
 		</constant>
 		<constant name="PULSE_PC_NZ_16BIT" value="24" enum="SiONPulseGeneratorType">
-			Pitch-controllable periodic noise pulse generator.
 		</constant>
 		<constant name="PULSE_PC_NZ_SHORT" value="25" enum="SiONPulseGeneratorType">
-			Pitch-controllable 93-byte noise pulse generator.
 		</constant>
 		<constant name="PULSE_PC_NZ_OPM" value="26" enum="SiONPulseGeneratorType">
-			Pitch-controllable pulse noise with OPM noise table pulse generator.
 		</constant>
 		<constant name="PULSE_MA3_SINE" value="32" enum="SiONPulseGeneratorType">
-			MA-3 sine wave pulse generator.
 		</constant>
 		<constant name="PULSE_MA3_SINE_HALF" value="33" enum="SiONPulseGeneratorType">
-			MA-3 half sine wave pulse generator.
 		</constant>
 		<constant name="PULSE_MA3_SINE_HALF_DOUBLE" value="34" enum="SiONPulseGeneratorType">
-			MA-3 half sine doubled wave pulse generator.
 		</constant>
 		<constant name="PULSE_MA3_SINE_QUART_DOUBLE" value="35" enum="SiONPulseGeneratorType">
-			MA-3 quarter sine doubled wave pulse generator.
 		</constant>
 		<constant name="PULSE_MA3_SINE_X2" value="36" enum="SiONPulseGeneratorType">
-			MA-3 sine sped up (half phase) wave pulse generator.
 		</constant>
 		<constant name="PULSE_MA3_SINE_HALF_DOUBLE_X2" value="37" enum="SiONPulseGeneratorType">
-			MA-3 half sine doubled sped up (half phase) wave pulse generator.
 		</constant>
 		<constant name="PULSE_MA3_SQUARE" value="38" enum="SiONPulseGeneratorType">
-			MA-3 square wave pulse generator.
 		</constant>
 		<constant name="PULSE_MA3_SAW_SINE" value="39" enum="SiONPulseGeneratorType">
-			MA-3 downwards saw wave with sine flattening pulse generator.
 		</constant>
 		<constant name="PULSE_MA3_TRI_SINE" value="40" enum="SiONPulseGeneratorType">
-			MA-3 triangle modulated sine wave pulse generator.
 		</constant>
 		<constant name="PULSE_MA3_TRI_SINE_HALF" value="41" enum="SiONPulseGeneratorType">
-			MA-3 half triangle modulated sine wave pulse generator.
 		</constant>
 		<constant name="PULSE_MA3_TRI_SINE_HALF_DOUBLE" value="42" enum="SiONPulseGeneratorType">
-			MA-3 half triangle modulated sine doubled wave pulse generator.
 		</constant>
 		<constant name="PULSE_MA3_TRI_SINE_QUART_DOUBLE" value="43" enum="SiONPulseGeneratorType">
-			MA-3 quarter triangle modulated sine doubled wave pulse generator.
 		</constant>
 		<constant name="PULSE_MA3_TRI_SINE_X2" value="44" enum="SiONPulseGeneratorType">
-			MA-3 triangle modulated sine sped up (half phase) wave pulse generator.
 		</constant>
 		<constant name="PULSE_MA3_TRI_SINE_HALF_DOUBLE_X2" value="45" enum="SiONPulseGeneratorType">
-			MA-3 half triangle modulated sine doubled sped up (half phase) wave pulse generator.
 		</constant>
 		<constant name="PULSE_MA3_SQUARE_HALF" value="46" enum="SiONPulseGeneratorType">
-			MA-3 half square wave pulse generator.
 		</constant>
 		<constant name="PULSE_MA3_USER1" value="47" enum="SiONPulseGeneratorType">
-			MA-3 user defined wave pulse generator.
 		</constant>
 		<constant name="PULSE_MA3_TRI" value="48" enum="SiONPulseGeneratorType">
-			MA-3 triangle wave pulse generator.
 		</constant>
 		<constant name="PULSE_MA3_TRI_HALF" value="49" enum="SiONPulseGeneratorType">
-			MA-3 half triangle wave pulse generator.
 		</constant>
 		<constant name="PULSE_MA3_TRI_HALF_DOUBLE" value="50" enum="SiONPulseGeneratorType">
-			MA-3 half triangle doubled wave pulse generator.
 		</constant>
 		<constant name="PULSE_MA3_TRI_QUART_DOUBLE" value="51" enum="SiONPulseGeneratorType">
-			MA-3 quarter triangle doubled wave pulse generator.
 		</constant>
 		<constant name="PULSE_MA3_TRI_X2" value="52" enum="SiONPulseGeneratorType">
-			MA-3 triangle sped up (half phase) wave pulse generator.
 		</constant>
 		<constant name="PULSE_MA3_TRI_HALF_DOUBLE_X2" value="53" enum="SiONPulseGeneratorType">
-			MA-3 half triangle doubled sped up (half phase) wave pulse generator.
 		</constant>
 		<constant name="PULSE_MA3_SQUARE_QUART_DOUBLE" value="54" enum="SiONPulseGeneratorType">
-			MA-3 quarter square doubled wave pulse generator.
 		</constant>
 		<constant name="PULSE_MA3_USER2" value="55" enum="SiONPulseGeneratorType">
-			MA-3 user defined wave pulse generator.
 		</constant>
 		<constant name="PULSE_MA3_SAW" value="56" enum="SiONPulseGeneratorType">
-			MA-3 upwards saw wave pulse generator.
 		</constant>
 		<constant name="PULSE_MA3_SAW_HALF" value="57" enum="SiONPulseGeneratorType">
-			MA-3 half upwards saw wave pulse generator.
 		</constant>
 		<constant name="PULSE_MA3_SAW_HALF_DOUBLE" value="58" enum="SiONPulseGeneratorType">
-			MA-3 half upwards saw doubled wave pulse generator.
 		</constant>
 		<constant name="PULSE_MA3_SAW_QUART_DOUBLE" value="59" enum="SiONPulseGeneratorType">
-			MA-3 quarter upwards saw doubled wave pulse generator.
 		</constant>
 		<constant name="PULSE_MA3_SAW_X2" value="60" enum="SiONPulseGeneratorType">
-			MA-3 upwards saw sped up (half phase) wave pulse generator.
 		</constant>
 		<constant name="PULSE_MA3_SAW_HALF_DOUBLE_X2" value="61" enum="SiONPulseGeneratorType">
-			MA-3 half upwards saw doubled sped up (half phase) wave pulse generator.
 		</constant>
 		<constant name="PULSE_MA3_SQUARE_QUART" value="62" enum="SiONPulseGeneratorType">
-			MA-3 quarter square wave pulse generator.
 		</constant>
 		<constant name="PULSE_MA3_USER3" value="63" enum="SiONPulseGeneratorType">
-			MA-3 user defined wave pulse generator.
 		</constant>
 		<constant name="PULSE_PULSE" value="64" enum="SiONPulseGeneratorType">
-			This and the next [code]16[/code] values are square pulse wave pulse generators.
 		</constant>
 		<constant name="PULSE_PULSE_SPIKE" value="80" enum="SiONPulseGeneratorType">
-			This and the next [code]16[/code] values are square pulse wave with spike pulse generators.
 		</constant>
 		<constant name="PULSE_RAMP" value="128" enum="SiONPulseGeneratorType">
-			This and the next [code]128[/code] values are ramp wave pulse generators. Values [code]0-4[/code] are equivalent to an upwards saw wave. Values [code]124-127[/code] are equivalent to a downwards saw wave. Value [code]64[/code] is equivalent to a triangle wave.
 		</constant>
 		<constant name="PULSE_CUSTOM" value="256" enum="SiONPulseGeneratorType">
-			This and the next [code]128[/code] values are custom wave table pulse generators.
 		</constant>
 		<constant name="PULSE_PCM" value="384" enum="SiONPulseGeneratorType">
-			This and the next [code]128[/code] values are PCM data pulse generators.
 		</constant>
 		<constant name="PULSE_USER_CUSTOM" value="-1" enum="SiONPulseGeneratorType">
-			User registered custom wave table pulse generator.
 		</constant>
 		<constant name="PULSE_USER_PCM" value="-2" enum="SiONPulseGeneratorType">
-			User registered PCM data pulse generator.
 		</constant>
 	</constants>
 </class>
